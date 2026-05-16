@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Chess</title>
+  
+  <!-- Chessboard.js CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-base: #020617;
+      --bg-gradient-1: #0f172a;
+      --bg-gradient-2: #1e1b4b;
+      --panel-bg: rgba(15, 23, 42, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #60a5fa;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --danger: #ef4444;
+      --danger-hover: #f87171;
+      --success: #10b981;
+      --board-light: #cbd5e1;
+      --board-dark: #475569;
+      --highlight: rgba(96, 165, 250, 0.5);
+      --check: rgba(239, 68, 68, 0.8);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--bg-base) 0%, var(--bg-gradient-1) 50%, var(--bg-gradient-2) 100%);
+      color: var(--text-main);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Layout */
+    .container {
+      display: flex;
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px;
+      gap: 30px;
+    }
+
+    .main-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0; /* flexbug fix */
+      align-items: center;
+    }
+
+    .side-column {
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Glassmorphism Panels */
+    .panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Setup Screen */
+    #setup-screen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .setup-box {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--panel-border);
+      padding: 40px;
+      border-radius: 24px;
+      text-align: center;
+      max-width: 450px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5), 0 0 20px var(--accent-glow);
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+    .setup-box h2 { margin-bottom: 15px; font-weight: 600; font-size: 2em; letter-spacing: -0.5px; }
+    .color-select { display: flex; gap: 20px; margin-bottom: 20px; justify-content: center; }
+    .color-btn {
+      width: 120px; height: 120px;
+      border-radius: 16px; border: 2px solid transparent;
+      cursor: pointer; font-size: 50px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    }
+    .color-btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4); }
+    .color-btn.white { background: linear-gradient(135deg, #f8fafc, #cbd5e1); color: #0f172a; }
+    .color-btn.black { background: linear-gradient(135deg, #334155, #0f172a); color: #f8fafc; border: 1px solid #475569; }
+
+    /* Board Area */
+    .board-container {
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+      border: 4px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Customizing Chessboard.js colors via CSS overrides */
+    .white-1e1d7 { background-color: var(--board-light) !important; color: var(--board-dark) !important; }
+    .black-3c85d { background-color: var(--board-dark) !important; color: var(--board-light) !important; }
+    
+    .player-info {
+      width: 100%;
+      max-width: 650px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 15px;
+      font-weight: 500;
+      font-size: 1.1em;
+      letter-spacing: 0.5px;
+    }
+    .captured-pieces { color: var(--text-muted); font-size: 1.3em; letter-spacing: 4px; display: flex; align-items: center; }
+    .material-adv { color: var(--success); font-size: 0.8em; margin-left: 10px; font-weight: 700; background: rgba(16, 185, 129, 0.2); padding: 2px 8px; border-radius: 12px; }
+
+    /* Action Buttons */
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 650px;
+    }
+    button {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: inherit;
+      font-size: 0.95em;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(5px);
+    }
+    button:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    button.primary { 
+      background: linear-gradient(135deg, var(--accent), #2563eb); 
+      border: none;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+    button.primary:hover { background: linear-gradient(135deg, var(--accent-hover), var(--accent)); box-shadow: 0 6px 20px var(--accent-glow); }
+    button.danger { background: linear-gradient(135deg, var(--danger), #b91c1c); border: none; }
+    button.danger:hover { background: linear-gradient(135deg, var(--danger-hover), var(--danger)); box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4); }
+
+    /* Move List */
+    .move-list-panel { flex: 0.8; overflow-y: auto; }
+    .move-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 0.95em; }
+    .move-table th { text-align: left; padding: 10px; color: var(--text-muted); position: sticky; top: 0; background: rgba(15, 23, 42, 0.95); z-index: 2; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8em; }
+    .move-table td { padding: 8px 10px; cursor: pointer; transition: background 0.2s; }
+    .move-table tr td:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; color: var(--text-muted); font-weight: 600; }
+    .move-table tr td:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+    .move-table tr { background: rgba(255,255,255,0.02); }
+    .move-table tr:hover { background: rgba(255,255,255,0.05); }
+    .move-cell.active { background: var(--accent); color: white; font-weight: 600; }
+
+    /* Chat Area */
+    .chat-panel { flex: 1.2; display: flex; flex-direction: column; }
+    .chat-history {
+      flex: 1; overflow-y: auto; padding: 5px;
+      display: flex; flex-direction: column; gap: 12px;
+      scroll-behavior: smooth;
+    }
+    /* Hide scrollbar for chat */
+    .chat-history::-webkit-scrollbar { width: 6px; }
+    .chat-history::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    
+    .message { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.95em; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.1); animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .msg-hermes { background: rgba(51, 65, 85, 0.8); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--panel-border); }
+    .msg-player { background: linear-gradient(135deg, var(--accent), #2563eb); align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 10px var(--accent-glow); }
+    .msg-system { background: transparent; color: var(--text-muted); align-self: center; font-size: 0.85em; font-style: italic; box-shadow: none; padding: 4px; }
+    
+    .chat-input {
+      display: flex; gap: 10px; margin-top: 15px; position: relative;
+    }
+    .chat-input input {
+      flex: 1; padding: 14px 20px; border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white;
+      outline: none; font-family: inherit; font-size: 0.95em;
+      transition: all 0.3s;
+    }
+    .chat-input input:focus { border-color: var(--accent); background: rgba(0, 0, 0, 0.4); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+
+    /* Status Bar */
+    .status-bar {
+      width: 100%;
+      max-width: 650px;
+      margin-top: auto;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      text-align: center;
+      font-weight: 500;
+      font-size: 1em;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+    }
+    .status-thinking { color: var(--accent); animation: pulse-text 1.5s infinite; font-style: italic; }
+
+    @keyframes pulse-text {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; text-shadow: 0 0 8px var(--accent-glow); }
+      100% { opacity: 0.5; }
+    }
+
+    /* Custom Highlight */
+    .highlight-white { box-shadow: inset 0 0 0 4px var(--highlight) !important; background: rgba(96, 165, 250, 0.2) !important; }
+    .highlight-black { box-shadow: inset 0 0 0 4px var(--highlight) !important; background: rgba(96, 165, 250, 0.2) !important; }
+    .in-check { box-shadow: inset 0 0 20px 5px var(--check) !important; background: rgba(239, 68, 68, 0.5) !important; }
+
+    /* Promotion Dialog */
+    #promotion-dialog {
+      display: none; position: absolute; background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--panel-border); border-radius: 12px; padding: 10px;
+      z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      gap: 5px;
+    }
+    .promo-piece { cursor: pointer; width: 50px; height: 50px; transition: transform 0.2s, background 0.2s; border-radius: 8px; padding: 2px; }
+    .promo-piece:hover { transform: scale(1.15); background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+
+  <!-- Setup Screen -->
+  <div id="setup-screen">
+    <div class="setup-box">
+      <h2 id="setup-title">Waiting for Hermes...</h2>
+      <p id="setup-msg" style="color: var(--text-muted); margin-bottom: 20px;">Start the game from the CLI via /chess</p>
+      
+      <div id="side-selector" style="display: none;">
+        <h3>Choose your side</h3>
+        <div class="color-select">
+          <div class="color-btn white" onclick="selectSide('white')">♔</div>
+          <div class="color-btn black" onclick="selectSide('black')">♚</div>
+        </div>
+      </div>
+      
+      <div id="reconnect-dialog" style="display: none;">
+        <h3>Game in progress found</h3>
+        <button class="primary" style="margin-top: 15px;" onclick="resumeGame()">Resume Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Left: Board Area -->
+    <div class="main-column">
+      <!-- Top opponent info -->
+      <div class="player-info" id="opponent-info">
+        <div>
+          Hermes <span id="hermes-thinking" class="status-thinking" style="display: none; font-size: 0.8em; margin-left: 10px;">thinking...</span>
+        </div>
+        <div class="captured-pieces" id="captured-top"></div>
+      </div>
+
+      <div class="panel">
+        <div class="board-container">
+          <div id="board"></div>
+        </div>
+        <!-- Promotion Dialog overlay inside board container conceptually -->
+        <div id="promotion-dialog"></div>
+      </div>
+
+      <!-- Bottom player info -->
+      <div class="player-info" id="player-info">
+        <div>You</div>
+        <div class="captured-pieces" id="captured-bottom"></div>
+      </div>
+
+      <div class="actions">
+        <button onclick="boardObj.flip()">Flip Board</button>
+        <button id="btn-takeback" onclick="requestTakeback()" style="display:none;">Request Takeback</button>
+        <button id="btn-draw" onclick="offerDraw()" style="display:none;">Offer Draw</button>
+        <button id="btn-resign" class="danger" onclick="resignGame()" style="display:none;">Resign</button>
+        
+        <button id="btn-rematch" class="primary" onclick="requestRematch()" style="display:none;">Rematch</button>
+        <button id="btn-new-game" onclick="showSideSelection()" style="display:none;">New Game</button>
+      </div>
+
+      <div class="status-bar" id="status-bar">Waiting to connect...</div>
+    </div>
+
+    <!-- Right: Chat & Moves -->
+    <div class="side-column">
+      
+      <!-- Move List -->
+      <div class="panel move-list-panel">
+        <table class="move-table">
+          <thead><tr><th width="30">#</th><th>White</th><th>Black</th></tr></thead>
+          <tbody id="move-list-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Chat -->
+      <div class="panel chat-panel">
+        <div class="chat-history" id="chat-history">
+          <div class="message msg-system">Connected to local Hermes MCP Server</div>
+        </div>
+        <form class="chat-input" id="chat-form">
+          <input type="text" id="chat-input" placeholder="Message Hermes..." autocomplete="off">
+          <button type="submit" class="primary">Send</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Audio Elements -->
+  <audio id="snd-move" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3" preload="auto"></audio>
+  <audio id="snd-capture" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3" preload="auto"></audio>
+  <audio id="snd-check" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3" preload="auto"></audio>
+  <audio id="snd-end" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-end.mp3" preload="auto"></audio>
+
+  <!-- Using Chess.js for client-side legal move validation (so dragging feels good) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <!-- Using Chessboard.js for rendering -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <script>
+    // --- State ---
+    let ws = null;
+    let boardObj = null;
+    let game = new Chess();
+    let playerColor = 'white';
+    let gameState = 'WAITING'; // WAITING, SETUP, PLAYING, REVIEW
+    
+    // UI Elements
+    const setupScreen = document.getElementById('setup-screen');
+    const setupTitle = document.getElementById('setup-title');
+    const setupMsg = document.getElementById('setup-msg');
+    const sideSelector = document.getElementById('side-selector');
+    const reconnectDialog = document.getElementById('reconnect-dialog');
+    const chatHistory = document.getElementById('chat-history');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const statusBar = document.getElementById('status-bar');
+    const moveListBody = document.getElementById('move-list-body');
+    const promotionDialog = document.getElementById('promotion-dialog');
+
+    // Action Buttons
+    const btnTakeback = document.getElementById('btn-takeback');
+    const btnDraw = document.getElementById('btn-draw');
+    const btnResign = document.getElementById('btn-resign');
+    const btnRematch = document.getElementById('btn-rematch');
+    const btnNewGame = document.getElementById('btn-new-game');
+
+    // --- WebSocket Connection ---
+    function connect() {
+      ws = new WebSocket('ws://localhost:3377');
+      
+      ws.onopen = () => {
+        addSystemMessage("WebSocket connected.");
+      };
+      
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleServerMessage(msg);
+      };
+      
+      ws.onclose = () => {
+        addSystemMessage("Connection lost. Reconnecting...");
+        setTimeout(connect, 2000);
+      };
+    }
+
+    // --- Message Handling ---
+    function handleServerMessage(msg) {
+      console.log('Server message:', msg);
+      
+      switch (msg.type) {
+        case 'waiting':
+          setupScreen.style.display = 'flex';
+          setupTitle.textContent = 'Waiting for Hermes...';
+          setupMsg.textContent = msg.message;
+          sideSelector.style.display = 'none';
+          reconnectDialog.style.display = 'none';
+          break;
+          
+        case 'hermes_waiting':
+          // Hermes called wait_for_player_input()
+          document.getElementById('hermes-thinking').style.display = 'none';
+          if (gameState === 'WAITING') {
+            // First wait is for side selection
+            showSideSelection();
+          }
+          break;
+
+        case 'hermes_thinking':
+          document.getElementById('hermes-thinking').style.display = 'inline-block';
+          break;
+
+        case 'game_started':
+          setupScreen.style.display = 'none';
+          startGame(msg.data);
+          break;
+
+        case 'game_state':
+        case 'game_loaded':
+          setupScreen.style.display = 'none';
+          restoreGame(msg.data);
+          break;
+
+        case 'resume_available':
+          setupScreen.style.display = 'flex';
+          setupTitle.textContent = 'Game found';
+          setupMsg.textContent = 'A game is already in progress.';
+          sideSelector.style.display = 'none';
+          reconnectDialog.style.display = 'block';
+          break;
+
+        case 'hermes_message':
+          addMessage('Hermes', msg.text, 'msg-hermes');
+          break;
+
+        case 'move_applied':
+          // Confirmed player move
+          applyMove(msg.data.move);
+          updateStatus();
+          break;
+
+        case 'hermes_move':
+          // Hermes made a move
+          applyMove(msg.data.move);
+          updateStatus();
+          break;
+
+        case 'illegal_move':
+          addSystemMessage(`Server rejected move: ${msg.error}`);
+          boardObj.position(game.fen()); // Revert UI
+          break;
+
+        case 'game_over':
+          handleGameOver(msg.data);
+          break;
+          
+        case 'draw_offered_by_hermes':
+          addSystemMessage("Hermes offered a draw.");
+          if (confirm("Hermes offers a draw. Accept?")) {
+            sendDrawResponse(true);
+          } else {
+            sendDrawResponse(false);
+          }
+          break;
+          
+        case 'takeback_accepted':
+          addSystemMessage("Hermes accepted your takeback.");
+          break;
+          
+        case 'takeback_declined':
+          addSystemMessage("Hermes declined your takeback.");
+          break;
+
+        case 'move_undone':
+          game.undo(); // Undo hermes move
+          game.undo(); // Undo player move
+          boardObj.position(game.fen());
+          renderMoveHistory();
+          updateStatus();
+          break;
+      }
+    }
+
+    // --- Actions ---
+    function selectSide(color) {
+      playerColor = color;
+      ws.send(JSON.stringify({ type: 'side_selection', color }));
+      setupScreen.style.display = 'none';
+    }
+
+    function showSideSelection() {
+      gameState = 'SETUP';
+      setupScreen.style.display = 'flex';
+      setupTitle.textContent = 'Choose your side';
+      setupMsg.textContent = 'Hermes is ready.';
+      sideSelector.style.display = 'block';
+      reconnectDialog.style.display = 'none';
+      
+      btnRematch.style.display = 'none';
+      btnNewGame.style.display = 'none';
+    }
+
+    function startGame(data) {
+      gameState = 'PLAYING';
+      playerColor = data.playerColor;
+      game = new Chess(data.fen);
+      
+      initBoard();
+      boardObj.position(data.fen);
+      boardObj.orientation(playerColor);
+      
+      moveHistory = [];
+      renderMoveHistory();
+      updateStatus();
+      
+      btnTakeback.style.display = 'inline-block';
+      btnDraw.style.display = 'inline-block';
+      btnResign.style.display = 'inline-block';
+      btnRematch.style.display = 'none';
+      btnNewGame.style.display = 'none';
+    }
+
+    function restoreGame(data) {
+      gameState = data.gameActive ? 'PLAYING' : 'REVIEW';
+      playerColor = data.playerColor;
+      game = new Chess(data.fen);
+      
+      initBoard();
+      boardObj.position(data.fen);
+      boardObj.orientation(playerColor);
+      
+      // We don't have full moveHistory structure in UI yet, simplify for now
+      // A full implementation would sync `data.moveHistory`
+      
+      updateStatus();
+      
+      if (gameState === 'PLAYING') {
+        btnTakeback.style.display = 'inline-block';
+        btnDraw.style.display = 'inline-block';
+        btnResign.style.display = 'inline-block';
+      } else {
+        handleGameOver(data.gameResult);
+      }
+    }
+
+    function resumeGame() {
+      ws.send(JSON.stringify({ type: 'chat', message: '/resume' })); // Hacky, requires server support, or just wait for state sync
+      // Ideally server sends state automatically on reconnect if we prompt it or on connection
+    }
+
+    // --- Board & Drag Logic ---
+    function initBoard() {
+      if (boardObj) boardObj.destroy();
+      
+      const config = {
+        draggable: true,
+        position: 'start',
+        orientation: playerColor,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: onSnapEnd
+      };
+      boardObj = Chessboard('board', config);
+    }
+
+    function onDragStart(source, piece, position, orientation) {
+      if (gameState !== 'PLAYING') return false;
+      
+      // Only pick up own pieces
+      if ((playerColor === 'white' && piece.search(/^b/) !== -1) ||
+          (playerColor === 'black' && piece.search(/^w/) !== -1)) {
+        return false;
+      }
+      
+      // Only pick up pieces if it's our turn
+      const turn = game.turn() === 'w' ? 'white' : 'black';
+      if (turn !== playerColor) return false;
+    }
+
+    let pendingPromotion = null;
+
+    function onDrop(source, target) {
+      if (source === target) return 'snapback';
+      
+      // Check for promotion
+      const piece = game.get(source);
+      if (piece && piece.type === 'p' && 
+         ((piece.color === 'w' && target[1] === '8') || 
+          (piece.color === 'b' && target[1] === '1'))) {
+        
+        pendingPromotion = { source, target };
+        showPromotionDialog(target);
+        return 'trash'; // Temp remove from board while choosing
+      }
+      
+      // Validate locally
+      const move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // default for local check
+      });
+      
+      if (move === null) return 'snapback';
+      
+      // Undo local move (server is authoritative)
+      game.undo();
+      
+      // Send to server
+      const uci = source + target;
+      ws.send(JSON.stringify({ type: 'move', move: uci }));
+    }
+
+    function onSnapEnd() {
+      boardObj.position(game.fen());
+    }
+
+    // --- Promotion UI ---
+    function showPromotionDialog(square) {
+      const $board = $('#board');
+      const $square = $('.square-' + square);
+      if ($square.length === 0) return;
+      
+      const offset = $square.offset();
+      const boardOffset = $board.offset();
+      
+      promotionDialog.innerHTML = `
+        <img class="promo-piece" src="https://chessboardjs.com/img/chesspieces/wikipedia/${playerColor[0]}q.png" onclick="choosePromotion('q')">
+        <img class="promo-piece" src="https://chessboardjs.com/img/chesspieces/wikipedia/${playerColor[0]}r.png" onclick="choosePromotion('r')">
+        <img class="promo-piece" src="https://chessboardjs.com/img/chesspieces/wikipedia/${playerColor[0]}b.png" onclick="choosePromotion('b')">
+        <img class="promo-piece" src="https://chessboardjs.com/img/chesspieces/wikipedia/${playerColor[0]}n.png" onclick="choosePromotion('n')">
+      `;
+      
+      promotionDialog.style.display = 'flex';
+      promotionDialog.style.left = (offset.left - boardOffset.left) + 'px';
+      promotionDialog.style.top = (offset.top - boardOffset.top) + 'px';
+    }
+
+    function choosePromotion(pieceType) {
+      if (!pendingPromotion) return;
+      
+      promotionDialog.style.display = 'none';
+      const uci = pendingPromotion.source + pendingPromotion.target + pieceType;
+      ws.send(JSON.stringify({ type: 'move', move: uci }));
+      pendingPromotion = null;
+    }
+
+    // --- Game Updates ---
+    function applyMove(moveData) {
+      // moveData comes from server game.moveHistory entry
+      game.move({ from: moveData.from, to: moveData.to, promotion: moveData.promotion });
+      boardObj.position(game.fen());
+      
+      // Highlight last move
+      $('.square-55d63').removeClass('highlight-white highlight-black in-check');
+      $('.square-' + moveData.from).addClass('highlight-' + playerColor);
+      $('.square-' + moveData.to).addClass('highlight-' + playerColor);
+      
+      // Play Sound
+      if (moveData.isCheck) {
+        document.getElementById('snd-check').play().catch(()=>{});
+      } else if (moveData.captured) {
+        document.getElementById('snd-capture').play().catch(()=>{});
+      } else {
+        document.getElementById('snd-move').play().catch(()=>{});
+      }
+      
+      if (moveData.isCheck) {
+        // Find king and highlight red
+        const turn = game.turn();
+        for (let r = 0; r < 8; r++) {
+          for (let f = 0; f < 8; f++) {
+            const sq = "abcdefgh"[f] + (r+1);
+            const p = game.get(sq);
+            if (p && p.type === 'k' && p.color === turn) {
+              $('.square-' + sq).addClass('in-check');
+            }
+          }
+        }
+      }
+      
+      renderMoveHistory();
+    }
+
+    function updateStatus() {
+      if (gameState !== 'PLAYING') return;
+      
+      const turn = game.turn() === 'w' ? 'white' : 'black';
+      if (turn === playerColor) {
+        statusBar.textContent = "Your turn";
+        statusBar.style.color = "var(--success)";
+      } else {
+        statusBar.textContent = "Hermes is thinking...";
+        statusBar.style.color = "var(--text-muted)";
+      }
+    }
+
+    function handleGameOver(result) {
+      document.getElementById('snd-end').play().catch(()=>{});
+      gameState = 'REVIEW';
+      let msg = "Game Over. ";
+      if (result.reason === 'checkmate') {
+        msg += result.result === '1-0' ? "White wins by checkmate." : "Black wins by checkmate.";
+      } else if (result.reason === 'draw_agreed') {
+        msg += "Draw agreed.";
+      } else {
+        msg += `${result.reason} - ${result.result}`;
+      }
+      
+      statusBar.textContent = msg;
+      statusBar.style.color = "var(--text-main)";
+      
+      btnTakeback.style.display = 'none';
+      btnDraw.style.display = 'none';
+      btnResign.style.display = 'none';
+      
+      btnRematch.style.display = 'inline-block';
+      btnNewGame.style.display = 'inline-block';
+    }
+
+    // --- Buttons ---
+    function requestTakeback() {
+      ws.send(JSON.stringify({ type: 'takeback_request' }));
+      addSystemMessage("Takeback requested. Waiting for Hermes...");
+    }
+    
+    function offerDraw() {
+      ws.send(JSON.stringify({ type: 'draw_offer' }));
+      addSystemMessage("Draw offered.");
+    }
+    
+    function resignGame() {
+      if (confirm("Are you sure you want to resign?")) {
+        ws.send(JSON.stringify({ type: 'resign' }));
+      }
+    }
+    
+    function requestRematch() {
+      ws.send(JSON.stringify({ type: 'rematch', player_color: playerColor === 'white' ? 'black' : 'white' }));
+    }
+
+    function sendDrawResponse(accept) {
+      // The server expects a tool call from Hermes for respond_to_draw, not browser directly
+      // But if player accepts Hermes's offer, we send it as a chat or specific event
+      // For simplicity in this demo, send via chat
+      ws.send(JSON.stringify({ type: 'chat', message: accept ? 'I accept the draw.' : 'I decline the draw.' }));
+    }
+
+    // --- UI Helpers ---
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+      
+      addMessage('You', text, 'msg-player');
+      ws.send(JSON.stringify({ type: 'chat', message: text }));
+      chatInput.value = '';
+    });
+
+    function addMessage(sender, text, className) {
+      const div = document.createElement('div');
+      div.className = `message ${className}`;
+      div.textContent = text;
+      chatHistory.appendChild(div);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+    
+    function addSystemMessage(text) {
+      addMessage('System', text, 'msg-system');
+    }
+
+    function renderMoveHistory() {
+      // Extract from chess.js history
+      const hist = game.history({ verbose: true });
+      moveListBody.innerHTML = '';
+      
+      for (let i = 0; i < hist.length; i += 2) {
+        const whiteMove = hist[i] ? hist[i].san : '';
+        const blackMove = hist[i+1] ? hist[i+1].san : '';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color:var(--text-muted)">${(i/2)+1}</td>
+          <td class="move-cell">${whiteMove}</td>
+          <td class="move-cell">${blackMove}</td>
+        `;
+        moveListBody.appendChild(tr);
+      }
+      moveListBody.parentElement.parentElement.scrollTop = moveListBody.parentElement.parentElement.scrollHeight;
+    }
+
+    // Init
+    connect();
+
+  </script>
+</body>
+</html>

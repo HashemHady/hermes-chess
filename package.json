@@ -1,0 +1,20 @@
+{
+  "name": "hermes-chess",
+  "version": "1.0.0",
+  "description": "Play chess against your Hermes agent in the browser",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "chess.js": "^1.0.0-beta.8",
+    "ws": "^8.18.0",
+    "better-sqlite3": "^11.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
