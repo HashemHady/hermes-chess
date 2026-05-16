@@ -18,12 +18,12 @@ Hermes Chess connects the [Hermes Agent](https://github.com/nousresearch/hermes-
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hashem/hermes-chess/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HashemHady/hermes-chess/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://raw.githubusercontent.com/hashem/hermes-chess/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HashemHady/hermes-chess/main/install.ps1 | iex
 ```
 
 *The installer will clone the repository to `~/.hermes-chess`, install dependencies, copy the skill file to `~/.hermes/skills/`, and update your `~/.hermes/config.yaml` automatically.*
