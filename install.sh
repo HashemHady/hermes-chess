@@ -22,8 +22,14 @@ if [ -d "$DEST_DIR" ]; then
     rm -rf "$DEST_DIR"
 fi
 
-echo "📦 Cloning repository..."
-git clone https://github.com/hashem/hermes-chess.git "$DEST_DIR"
+if [ -f "package.json" ] && [ -d "server" ]; then
+    echo "📦 Local source detected. Copying files..."
+    mkdir -p "$DEST_DIR"
+    cp -R . "$DEST_DIR/"
+else
+    echo "📦 Cloning repository..."
+    git clone https://github.com/HashemHady/hermes-chess.git "$DEST_DIR"
+fi
 
 echo "📦 Installing dependencies..."
 cd "$DEST_DIR"

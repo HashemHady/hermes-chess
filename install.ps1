@@ -24,8 +24,14 @@ if (Test-Path $destDir) {
     Remove-Item -Recurse -Force $destDir
 }
 
-Write-Host "📦 Cloning repository..." -ForegroundColor Cyan
-git clone https://github.com/hashem/hermes-chess.git $destDir
+if ((Test-Path "package.json") -and (Test-Path "server")) {
+    Write-Host "📦 Local source detected. Copying files..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+    Copy-Item -Path .\* -Destination $destDir -Recurse -Force
+} else {
+    Write-Host "📦 Cloning repository..." -ForegroundColor Cyan
+    git clone https://github.com/HashemHady/hermes-chess.git $destDir
+}
 
 Write-Host "📦 Installing dependencies..." -ForegroundColor Cyan
 Set-Location $destDir
