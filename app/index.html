@@ -6,7 +6,7 @@
   <title>Hermes Chess</title>
   
   <!-- Chessboard.js CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -72,6 +72,8 @@
 
     /* Glassmorphism Panels */
     .panel {
+      width: 100%;
+      max-width: 690px;
       background: var(--panel-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -288,7 +290,10 @@
       
       <div id="reconnect-dialog" style="display: none;">
         <h3>Game in progress found</h3>
-        <button class="primary" style="margin-top: 15px;" onclick="resumeGame()">Resume Game</button>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+          <button class="primary" onclick="resumeGame()">Resume Game</button>
+          <button class="danger" onclick="abandonGame()">New Game</button>
+        </div>
       </div>
     </div>
   </div>
@@ -367,7 +372,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <!-- Using Chessboard.js for rendering -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
   <script>
     // --- State ---
@@ -537,9 +542,11 @@
       playerColor = data.playerColor;
       game = new Chess(data.fen);
       
-      initBoard();
-      boardObj.position(data.fen);
-      boardObj.orientation(playerColor);
+      setTimeout(() => {
+        initBoard();
+        boardObj.position(data.fen);
+        boardObj.orientation(playerColor);
+      }, 50);
       
       moveHistory = [];
       renderMoveHistory();
@@ -557,9 +564,11 @@
       playerColor = data.playerColor;
       game = new Chess(data.fen);
       
-      initBoard();
-      boardObj.position(data.fen);
-      boardObj.orientation(playerColor);
+      setTimeout(() => {
+        initBoard();
+        boardObj.position(data.fen);
+        boardObj.orientation(playerColor);
+      }, 50);
       
       // We don't have full moveHistory structure in UI yet, simplify for now
       // A full implementation would sync `data.moveHistory`
@@ -576,8 +585,11 @@
     }
 
     function resumeGame() {
-      ws.send(JSON.stringify({ type: 'chat', message: '/resume' })); // Hacky, requires server support, or just wait for state sync
-      // Ideally server sends state automatically on reconnect if we prompt it or on connection
+      ws.send(JSON.stringify({ type: 'resume_game' }));
+    }
+
+    function abandonGame() {
+      ws.send(JSON.stringify({ type: 'abandon_game' }));
     }
 
     // --- Board & Drag Logic ---

@@ -38,11 +38,11 @@ Set-Location $destDir
 npm install
 
 Write-Host "🧠 Installing Hermes skill..." -ForegroundColor Cyan
-$skillsDir = Join-Path $hermesDir "skills"
+$skillsDir = Join-Path $hermesDir "skills\hermes-chess"
 if (!(Test-Path $skillsDir)) {
     New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
 }
-Copy-Item (Join-Path $destDir "skills\chess.md") (Join-Path $skillsDir "chess.md") -Force
+Copy-Item (Join-Path $destDir "skills\hermes-chess\SKILL.md") (Join-Path $skillsDir "SKILL.md") -Force
 
 Write-Host "⚙️  Configuring Hermes MCP Server..." -ForegroundColor Cyan
 $configFile = Join-Path $hermesDir "config.yaml"
@@ -61,6 +61,7 @@ if ($configContent -match "chess:") {
   chess:
     command: "node"
     args: ["$serverPath"]
+    enabled: true
     supports_parallel_tool_calls: false
 "@
     Add-Content -Path $configFile -Value $mcpEntry

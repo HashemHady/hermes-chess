@@ -131,6 +131,28 @@ function handleBrowserMessage(msg) {
         resolve({ type: 'side_selection', color: msg.color });
         break;
 
+      case 'resume_game':
+        const activeGame = db.getActiveGame();
+        if (activeGame) {
+          game.gameId = activeGame.id;
+          game.playerColor = activeGame.playerColor;
+          game.hermesColor = activeGame.hermesColor;
+          game.importPgn(activeGame.pgn);
+          game.gameActive = true;
+          sendToBrowser({ type: 'game_loaded', data: game.serialize() });
+          resolve({ type: 'game_resumed', playerColor: game.playerColor, fen: game.chess.fen() });
+        } else {
+          sendToBrowser({ type: 'hermes_waiting' });
+          pendingInput = { resolve };
+        }
+        break;
+
+      case 'abandon_game':
+        db.db.prepare('UPDATE games SET active = 0 WHERE active = 1').run();
+        sendToBrowser({ type: 'hermes_waiting' });
+        pendingInput = { resolve };
+        break;
+
       default:
         // Unknown type — re-wait
         pendingInput = { resolve };

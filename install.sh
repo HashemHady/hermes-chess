@@ -36,8 +36,8 @@ cd "$DEST_DIR"
 npm install
 
 echo "🧠 Installing Hermes skill..."
-mkdir -p "$HOME/.hermes/skills"
-cp "$DEST_DIR/skills/chess.md" "$HOME/.hermes/skills/chess.md"
+mkdir -p "$HOME/.hermes/skills/hermes-chess"
+cp "$DEST_DIR/skills/hermes-chess/SKILL.md" "$HOME/.hermes/skills/hermes-chess/SKILL.md"
 
 echo "⚙️  Configuring Hermes MCP Server..."
 CONFIG_FILE="$HOME/.hermes/config.yaml"
@@ -47,29 +47,28 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "mcp_servers:" > "$CONFIG_FILE"
 fi
 
-# Remove existing chess entry if any (basic sed, assumes simple structure)
-# A safer way is to just append if not exists, or instruct user.
-if grep -q "mcp_servers:" "$CONFIG_FILE"; then
-    if ! grep -q "chess:" "$CONFIG_FILE"; then
-        cat >> "$CONFIG_FILE" << EOF
+python3 -c "
+import yaml
+import sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = yaml.safe_load(f) or {}
+except Exception:
+    config = {}
 
-  chess:
-    command: "node"
-    args: ["$DEST_DIR/server/index.js"]
-    supports_parallel_tool_calls: false
-EOF
-    else
-        echo "⚠️  'chess' MCP server already exists in config.yaml. Please ensure it points to $DEST_DIR/server/index.js"
-    fi
-else
-    echo "mcp_servers:" >> "$CONFIG_FILE"
-    cat >> "$CONFIG_FILE" << EOF
-  chess:
-    command: "node"
-    args: ["$DEST_DIR/server/index.js"]
-    supports_parallel_tool_calls: false
-EOF
-fi
+if 'mcp_servers' not in config or not isinstance(config['mcp_servers'], dict):
+    config['mcp_servers'] = {}
+
+config['mcp_servers']['chess'] = {
+    'command': 'node',
+    'args': ['$DEST_DIR/server/index.js'],
+    'enabled': True,
+    'supports_parallel_tool_calls': False
+}
+
+with open('$CONFIG_FILE', 'w') as f:
+    yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+"
 
 echo "✅ Installation complete!"
 echo "🚀 Start your Hermes Agent and say: 'let's play chess'"

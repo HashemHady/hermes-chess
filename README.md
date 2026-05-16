@@ -31,7 +31,7 @@ irm https://raw.githubusercontent.com/HashemHady/hermes-chess/main/install.ps1 |
 ## How to Play
 
 1. Start your Hermes Agent as usual (e.g., via CLI).
-2. Type `/chess` or simply say **"Let's play chess!"**
+2. Simply say **"Let's play chess!"** or **"I want to play chess"** to the agent.
 3. Hermes will automatically launch your default browser and ask you to pick a side.
 4. Play! You can chat with Hermes through the browser or directly in the terminal/gateway.
 
