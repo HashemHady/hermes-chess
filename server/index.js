@@ -69,94 +69,103 @@ wss.on('connection', (ws) => {
  * Handle messages from the browser.
  */
 function handleBrowserMessage(msg) {
-  // Resolve any pending wait_for_player_input
-  if (pendingInput) {
-    const resolve = pendingInput.resolve;
-    pendingInput = null;
+  messageQueue.push(msg);
+  processMessageQueue();
+}
 
-    switch (msg.type) {
-      case 'move':
-        // Player made a move — validate and apply
-        const result = game.makeMove(msg.move);
-        if (result.success) {
-          // Persist
-          db.saveMove(game.gameId, result.move, game.moveHistory.length);
+function processMessageQueue() {
+  if (!pendingInput || messageQueue.length === 0) return;
+
+  const msg = messageQueue.shift();
+  const resolve = pendingInput.resolve;
+  pendingInput = null;
+
+  switch (msg.type) {
+    case 'move':
+      // Player made a move — validate and apply
+      const result = game.makeMove(msg.move);
+      if (result.success) {
+        // Persist
+        db.saveMove(game.gameId, result.move, game.moveHistory.length);
+        db.updateGame(game.gameId, {
+          fen: game.chess.fen(),
+          pgn: game.getPgn(),
+          moveCount: game.moveHistory.length,
+        });
+        // Notify browser of the applied move
+        sendToBrowser({ type: 'move_applied', data: result });
+        // Check auto-end
+        if (result.gameOver) {
           db.updateGame(game.gameId, {
-            fen: game.chess.fen(),
-            pgn: game.getPgn(),
-            moveCount: game.moveHistory.length,
+            result: result.gameOver.result,
+            reason: result.gameOver.reason,
+            active: false,
           });
-          // Notify browser of the applied move
-          sendToBrowser({ type: 'move_applied', data: result });
-          // Check auto-end
-          if (result.gameOver) {
-            db.updateGame(game.gameId, {
-              result: result.gameOver.result,
-              reason: result.gameOver.reason,
-              active: false,
-            });
-            sendToBrowser({ type: 'game_over', data: result.gameOver });
-          }
-          resolve({ type: 'move', move: msg.move, san: result.san, gameOver: result.gameOver || null });
-        } else {
-          // Illegal move from browser — shouldn't happen (browser validates too)
-          sendToBrowser({ type: 'illegal_move', error: result.error });
-          // Re-wait for input
-          pendingInput = { resolve };
+          sendToBrowser({ type: 'game_over', data: result.gameOver });
         }
-        break;
-
-      case 'chat':
-        resolve({ type: 'chat', message: msg.message });
-        break;
-
-      case 'draw_offer':
-        sendToBrowser({ type: 'draw_offered_by_player' });
-        resolve({ type: 'draw_offer' });
-        break;
-
-      case 'resign':
-        resolve({ type: 'resign' });
-        break;
-
-      case 'takeback_request':
-        resolve({ type: 'takeback_request' });
-        break;
-
-      case 'rematch':
-        resolve({ type: 'rematch', player_color: msg.player_color || game.playerColor });
-        break;
-
-      case 'side_selection':
-        resolve({ type: 'side_selection', color: msg.color });
-        break;
-
-      case 'resume_game':
-        const activeGame = db.getActiveGame();
-        if (activeGame) {
-          game.gameId = activeGame.id;
-          game.playerColor = activeGame.playerColor;
-          game.hermesColor = activeGame.hermesColor;
-          game.importPgn(activeGame.pgn);
-          game.gameActive = true;
-          sendToBrowser({ type: 'game_loaded', data: game.serialize() });
-          resolve({ type: 'game_resumed', playerColor: game.playerColor, fen: game.chess.fen() });
-        } else {
-          sendToBrowser({ type: 'hermes_waiting' });
-          pendingInput = { resolve };
-        }
-        break;
-
-      case 'abandon_game':
-        db.db.prepare('UPDATE games SET active = 0 WHERE active = 1').run();
-        sendToBrowser({ type: 'hermes_waiting' });
+        resolve({ type: 'move', move: msg.move, san: result.san, gameOver: result.gameOver || null });
+      } else {
+        // Illegal move from browser — shouldn't happen (browser validates too)
+        sendToBrowser({ type: 'illegal_move', error: result.error });
+        // Re-wait for input
         pendingInput = { resolve };
-        break;
+        processMessageQueue(); // check if there's more in queue
+      }
+      break;
 
-      default:
-        // Unknown type — re-wait
+    case 'chat':
+      resolve({ type: 'chat', message: msg.message });
+      break;
+
+    case 'draw_offer':
+      sendToBrowser({ type: 'draw_offered_by_player' });
+      resolve({ type: 'draw_offer' });
+      break;
+
+    case 'resign':
+      resolve({ type: 'resign' });
+      break;
+
+    case 'takeback_request':
+      resolve({ type: 'takeback_request' });
+      break;
+
+    case 'rematch':
+      resolve({ type: 'rematch', player_color: msg.player_color || game.playerColor });
+      break;
+
+    case 'side_selection':
+      resolve({ type: 'side_selection', color: msg.color });
+      break;
+
+    case 'resume_game':
+      const activeGame = db.getActiveGame();
+      if (activeGame) {
+        game.gameId = activeGame.id;
+        game.playerColor = activeGame.playerColor;
+        game.hermesColor = activeGame.hermesColor;
+        game.importPgn(activeGame.pgn);
+        game.gameActive = true;
+        sendToBrowser({ type: 'game_loaded', data: game.serialize() });
+        resolve({ type: 'game_resumed', gameId: activeGame.id, fen: game.chess.fen() });
+      } else {
+        // Re-wait for input since resume failed
         pendingInput = { resolve };
-    }
+        processMessageQueue();
+      }
+      break;
+
+    case 'abandon_game':
+      db.abandonActiveGame();
+      sendToBrowser({ type: 'game_abandoned' });
+      // Now wait for side selection
+      pendingInput = { resolve };
+      processMessageQueue();
+      break;
+
+    default:
+      // Unknown type — re-wait
+      pendingInput = { resolve };
   }
 }
 
@@ -531,6 +540,9 @@ server.tool(
           sendToBrowser({ type: 'hermes_thinking' });
         },
       };
+
+      // Check if there's already a message waiting to be processed
+      processMessageQueue();
     });
   }
 );
